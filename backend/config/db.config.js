@@ -1,9 +1,26 @@
 import { PrismaClient } from "@prisma/client";
 
-const prism  = new PrismaClient({
+export const prism  = new PrismaClient({
 log : ["query"] , 
 
 })
 
+export async  function connectDB(){
+    try{
+        await prism.$connect();
 
-export default  prism ; 
+        console.log("Database connected succesfully") ;
+
+
+
+    }
+
+    catch(error){
+        console.log("Database connection  failed" , error) ; 
+
+
+    }
+}
+
+
+
