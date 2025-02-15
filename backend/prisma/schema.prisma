@@ -4,28 +4,190 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "postgresql"  // Change this if using PostgreSQL or another database
   url      = env("DATABASE_URL")
 }
 
 model Student {
-   student_id INT @id @default(autoincrement())
-   name string @unique 
-   email string @unique 
-   roll_no string @unique
-   password string 
-   batch   string 
-   division   string
-   unittestmarks UnitTestMarks[]
-   labassignment LabAssignment[]
-   mentorship Mentorship[]
-   classCoordinator ClassCoordinator[]
-   attendenceCoordinator AttendenceCoordinator[]
-   studentAchievementCommitie    StudentAchievementCommitie[]
-   }
+  student_id Int    @id @default(autoincrement())
+  roll_no    String @unique
+  name       String
+  email      String @unique
+  password   string 
+  unitTestMarks  UnitTestMarks[]
+  labAssignments LabAssignments[]
+  mentorships    Mentorship[]
+  classCoordinator ClassCoordinator[]
+  attendanceCoordinator AttendanceCoordinator[]
+  studentAchievements StudentAchievementCommittee[]
+  Auditcourse  AuditcourseCommittie[]
+}
 
-   
+model Teacher {
+  teacher_id Int    @id @default(autoincrement())
+  name       String
+  email      String @unique
+  phone_no   String @unique
 
+  roles TeacherRoles[]
+  subjects Subjects[]
+  unitTestMarks UnitTestMarks[]
+  labAssignments LabAssignments[]
+  mentorships Mentorship[]
+  classCoordinator ClassCoordinator[]
+  attendanceCoordinator AttendanceCoordinator[]
+  studentAchievements StudentAchievementCommittee[]
+  Auditcourse  AuditcourseCommittie[] 
+}
 
+model TeacherRoles {
+  teacher_id Int
+  role       Role
 
+  teacher Teacher @relation(fields: [teacher_id], references: [teacher_id], onDelete: Cascade)
 
+  @@id([teacher_id, role])
+}
+
+model Subjects {
+  sub_id     Int    @id @default(autoincrement())
+  name       String
+  type       SubjectType
+  teacher_id Int?
+
+  teacher Teacher? @relation(fields: [teacher_id], references: [teacher_id], onDelete: SetNull)
+
+  unitTestMarks  UnitTestMarks[]
+  labAssignments LabAssignments[]
+}
+
+model UnitTestMarks {
+  ut_id      Int  @id @default(autoincrement())
+  student_id Int
+  sub_id     Int
+  teacher_id Int?
+  test_number TestNumber
+  marks      Int @default(0) 
+
+  student Student @relation(fields: [student_id], references: [student_id], onDelete: Cascade)
+  subject Subjects @relation(fields: [sub_id], references: [sub_id], onDelete: Cascade)
+  teacher Teacher? @relation(fields: [teacher_id], references: [teacher_id], onDelete: SetNull)
+}
+
+model LabAssignments {
+  lab_id     Int    @id @default(autoincrement())
+  student_id Int
+  sub_id     Int
+  teacher_id Int?
+  status     LabStatus @default(Pending)
+
+  student Student @relation(fields: [student_id], references: [student_id], onDelete: Cascade)
+  subject Subjects @relation(fields: [sub_id], references: [sub_id], onDelete: Cascade)
+  teacher Teacher? @relation(fields: [teacher_id], references: [teacher_id], onDelete: SetNull)
+}
+
+model Mentorship {
+  mentor_id  Int    @id @default(autoincrement())
+  student_id Int
+  teacher_id Int?
+  status     MentorshipStatus @default(Pending)
+
+  student Student @relation(fields: [student_id], references: [student_id], onDelete: Cascade)
+  teacher Teacher? @relation(fields: [teacher_id], references: [teacher_id], onDelete: SetNull)
+}
+
+model ClassCoordinator {
+  cc_id                  Int  @id @default(autoincrement())
+  student_id             Int
+  teacher_id             Int?
+  final_submission_status SubmissionStatus @default(Pending)
+  feedback_status        FeedbackStatus @default(Pending)
+
+  student Student @relation(fields: [student_id], references: [student_id], onDelete: Cascade)
+  teacher Teacher? @relation(fields: [teacher_id], references: [teacher_id], onDelete: SetNull)
+}
+
+model AttendanceCoordinator {
+  id             Int    @id @default(autoincrement())
+  student_id     Int
+  teacher_id     Int?
+  attendance_status AttendanceStatus @default(Pending)
+
+  student Student @relation(fields: [student_id], references: [student_id], onDelete: Cascade)
+  teacher Teacher? @relation(fields: [teacher_id], references: [teacher_id], onDelete: SetNull)
+}
+
+model StudentAchievementCommittee {
+  id        Int  @id @default(autoincrement())
+  student_id Int
+  teacher_id Int?
+  status     AchievementStatus @default(Pending)
+
+  student Student @relation(fields: [student_id], references: [student_id], onDelete: Cascade)
+  teacher Teacher? @relation(fields: [teacher_id], references: [teacher_id], onDelete: SetNull)
+}
+
+model AuditcourseCommittie{
+  id        Int  @id @default(autoincrement())
+  student_id Int
+  teacher_id Int?
+  status     AuditcourseStatus @default(Pending)
+
+  student Student @relation(fields: [student_id], references: [student_id], onDelete: Cascade)
+  teacher Teacher? @relation(fields: [teacher_id], references: [teacher_id], onDelete: SetNull)
+}
+
+enum Role {
+  Mentor
+  CC
+  Theory
+  Lab
+  StudentAchievement
+  AttendanceCommittee
+  Auditcourse
+}
+
+enum SubjectType {
+  Theory
+  Lab
+}
+
+enum TestNumber {
+  UT1
+  UT2
+  UT3
+}
+
+enum LabStatus {
+  Submitted
+  Pending
+  Reviewed
+}
+
+enum MentorshipStatus {
+  Pending
+  Active
+  Completed
+}
+
+enum SubmissionStatus {
+  Completed
+  Pending
+}
+
+enum FeedbackStatus {
+  Submitted
+  Pending
+}
+
+enum AttendanceStatus {
+  Present
+  Absent
+  Pending
+}
+
+enum AchievementStatus {
+  Approved
+  Pending
+  Rejected
+}
