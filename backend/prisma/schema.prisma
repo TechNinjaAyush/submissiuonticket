@@ -1,56 +1,64 @@
-
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "postgresql"  // Change this if using PostgreSQL or another database
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
 model Student {
-  student_id Int    @id @default(autoincrement())
-  roll_no    String @unique
-  name       String
-  email      String @unique
-  password   string 
-  unitTestMarks  UnitTestMarks[]
-  labAssignments LabAssignments[]
-  mentorships    Mentorship[]
-  classCoordinator ClassCoordinator[]
+  student_id            Int                           @id @default(autoincrement())
+  roll_no               String                        @unique
+  name                  String
+  div                   String
+  batch                 String
+  email                 String                        @unique
+  password              String
+  unitTestMarks         UnitTestMarks[]
+  labAssignments        LabAssignments[]
+  mentorships           Mentorship[]
+  classCoordinator      ClassCoordinator[]
   attendanceCoordinator AttendanceCoordinator[]
-  studentAchievements StudentAchievementCommittee[]
-  Auditcourse  AuditcourseCommittie[]
+  studentAchievements   StudentAchievementCommittee[]
+  auditcourse           AuditcourseCommittee[]
 }
 
 model Teacher {
   teacher_id Int    @id @default(autoincrement())
   name       String
   email      String @unique
+  password   String
   phone_no   String @unique
-
-  roles TeacherRoles[]
-  subjects Subjects[]
-  unitTestMarks UnitTestMarks[]
-  labAssignments LabAssignments[]
-  mentorships Mentorship[]
-  classCoordinator ClassCoordinator[]
-  attendanceCoordinator AttendanceCoordinator[]
-  studentAchievements StudentAchievementCommittee[]
-  Auditcourse  AuditcourseCommittie[] 
+    
+  roles                 TeacherRoles[] // Links to the TeacherRoles model
+  subjects              Subjects[] // A teacher can teach multiple subjects
+  unitTestMarks         UnitTestMarks[] // Related to the unit test marks
+  labAssignments        LabAssignments[] // Lab assignments linked to the teacher
+  mentorships           Mentorship[] // Mentorship responsibilities
+  classCoordinator      ClassCoordinator[] // Class coordinator role
+  attendanceCoordinator AttendanceCoordinator[] // Attendance coordinator
+  studentAchievements   StudentAchievementCommittee[] // Student achievements committee
+  auditcourse           AuditcourseCommittee[] // Example for audit courses
 }
 
 model TeacherRoles {
   teacher_id Int
-  role       Role
+  role_id    Int
+  teacher    Teacher @relation(fields: [teacher_id], references: [teacher_id])
+  role       Role    @relation(fields: [role_id], references: [id])
 
-  teacher Teacher @relation(fields: [teacher_id], references: [teacher_id], onDelete: Cascade)
+  @@id([teacher_id, role_id])
+}
 
-  @@id([teacher_id, role])
+model Role {
+  id           Int            @id @default(autoincrement())
+  name         String         @unique
+  teacherRoles TeacherRoles[] // This correctly links back to TeacherRoles
 }
 
 model Subjects {
-  sub_id     Int    @id @default(autoincrement())
+  sub_id     Int         @id @default(autoincrement())
   name       String
   type       SubjectType
   teacher_id Int?
@@ -62,82 +70,83 @@ model Subjects {
 }
 
 model UnitTestMarks {
-  ut_id      Int  @id @default(autoincrement())
-  student_id Int
-  sub_id     Int
-  teacher_id Int?
+  ut_id       Int        @id @default(autoincrement())
+  student_id  Int
+  sub_id      Int
+  teacher_id  Int?
   test_number TestNumber
-  marks      Int @default(0) 
-
-  student Student @relation(fields: [student_id], references: [student_id], onDelete: Cascade)
-  subject Subjects @relation(fields: [sub_id], references: [sub_id], onDelete: Cascade)
-  teacher Teacher? @relation(fields: [teacher_id], references: [teacher_id], onDelete: SetNull)
+  marks       Int        @default(0)
+  student     Student    @relation(fields: [student_id], references: [student_id], onDelete: Cascade)
+  subject     Subjects   @relation(fields: [sub_id], references: [sub_id], onDelete: Cascade)
+  teacher     Teacher?   @relation(fields: [teacher_id], references: [teacher_id], onDelete: SetNull)
 }
 
 model LabAssignments {
-  lab_id     Int    @id @default(autoincrement())
+  lab_id     Int       @id @default(autoincrement())
   student_id Int
   sub_id     Int
   teacher_id Int?
   status     LabStatus @default(Pending)
-
-  student Student @relation(fields: [student_id], references: [student_id], onDelete: Cascade)
-  subject Subjects @relation(fields: [sub_id], references: [sub_id], onDelete: Cascade)
-  teacher Teacher? @relation(fields: [teacher_id], references: [teacher_id], onDelete: SetNull)
+  batch      String
+  student    Student   @relation(fields: [student_id], references: [student_id], onDelete: Cascade)
+  subject    Subjects  @relation(fields: [sub_id], references: [sub_id], onDelete: Cascade)
+  teacher    Teacher?  @relation(fields: [teacher_id], references: [teacher_id], onDelete: SetNull)
 }
 
 model Mentorship {
-  mentor_id  Int    @id @default(autoincrement())
+  mentor_id  Int              @id @default(autoincrement())
   student_id Int
   teacher_id Int?
+  batch      String
   status     MentorshipStatus @default(Pending)
 
-  student Student @relation(fields: [student_id], references: [student_id], onDelete: Cascade)
+  student Student  @relation(fields: [student_id], references: [student_id], onDelete: Cascade)
   teacher Teacher? @relation(fields: [teacher_id], references: [teacher_id], onDelete: SetNull)
 }
 
 model ClassCoordinator {
-  cc_id                  Int  @id @default(autoincrement())
-  student_id             Int
-  teacher_id             Int?
+  cc_id                   Int              @id @default(autoincrement())
+  student_id              Int
+  teacher_id              Int?
   final_submission_status SubmissionStatus @default(Pending)
-  feedback_status        FeedbackStatus @default(Pending)
-
-  student Student @relation(fields: [student_id], references: [student_id], onDelete: Cascade)
-  teacher Teacher? @relation(fields: [teacher_id], references: [teacher_id], onDelete: SetNull)
+  feedback_status         FeedbackStatus   @default(Pending)
+  div                     String
+  student                 Student          @relation(fields: [student_id], references: [student_id], onDelete: Cascade)
+  teacher                 Teacher?         @relation(fields: [teacher_id], references: [teacher_id], onDelete: SetNull)
 }
 
 model AttendanceCoordinator {
-  id             Int    @id @default(autoincrement())
-  student_id     Int
-  teacher_id     Int?
+  id                Int              @id @default(autoincrement())
+  student_id        Int
+  teacher_id        Int?
   attendance_status AttendanceStatus @default(Pending)
 
-  student Student @relation(fields: [student_id], references: [student_id], onDelete: Cascade)
+  student Student  @relation(fields: [student_id], references: [student_id], onDelete: Cascade)
   teacher Teacher? @relation(fields: [teacher_id], references: [teacher_id], onDelete: SetNull)
 }
 
 model StudentAchievementCommittee {
-  id        Int  @id @default(autoincrement())
+  id         Int               @id @default(autoincrement())
   student_id Int
   teacher_id Int?
   status     AchievementStatus @default(Pending)
 
-  student Student @relation(fields: [student_id], references: [student_id], onDelete: Cascade)
+  student Student  @relation(fields: [student_id], references: [student_id], onDelete: Cascade)
   teacher Teacher? @relation(fields: [teacher_id], references: [teacher_id], onDelete: SetNull)
 }
 
-model AuditcourseCommittie{
-  id        Int  @id @default(autoincrement())
+model AuditcourseCommittee {
+  id         Int               @id @default(autoincrement())
   student_id Int
   teacher_id Int?
+  batch      String
   status     AuditcourseStatus @default(Pending)
 
-  student Student @relation(fields: [student_id], references: [student_id], onDelete: Cascade)
+  student Student  @relation(fields: [student_id], references: [student_id], onDelete: Cascade)
   teacher Teacher? @relation(fields: [teacher_id], references: [teacher_id], onDelete: SetNull)
 }
 
-enum Role {
+enum UserRole {
   Mentor
   CC
   Theory
@@ -187,6 +196,12 @@ enum AttendanceStatus {
 }
 
 enum AchievementStatus {
+  Approved
+  Pending
+  Rejected
+}
+
+enum AuditcourseStatus {
   Approved
   Pending
   Rejected
