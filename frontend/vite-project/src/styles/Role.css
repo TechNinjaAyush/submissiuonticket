@@ -1,0 +1,54 @@
+.Role {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  background-color: #f5f7fa;
+  padding: 20px;
+}
+
+h4 {
+  color: #2c3e50;
+  font-size: 24px;
+  margin-bottom: 30px;
+  font-weight: 600;
+  text-align: center;
+}
+
+.Student, .Teacher {
+  width: 200px;
+  height: 60px;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  font-size: 18px;
+  font-weight: 600;
+  color: white;
+  margin: 10px 0;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.Student {
+  background-color: #3674B5;
+}
+
+.Student:hover {
+  background-color: #578FCA;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+}
+
+.Teacher {
+  background-color: #98D8EF;
+}
+
+.Teacher:hover {
+  background-color: #A1E3F9;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+}

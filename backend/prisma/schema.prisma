@@ -1,5 +1,6 @@
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "debian-openssl-3.0.x"]
 }
 
 datasource db {
@@ -8,7 +9,7 @@ datasource db {
 }
 
 model Student {
-  student_id            Int                           @id @default(autoincrement())
+  student_id            Int  @id @default(autoincrement())                       
   roll_no               String                        @unique
   name                  String
   div                   String
@@ -26,59 +27,120 @@ model Student {
 
 model Teacher {
   teacher_id Int    @id @default(autoincrement())
-  name       String
   email      String @unique
   password   String
-  phone_no   String @unique
-    
-  roles                 TeacherRoles[] // Links to the TeacherRoles model
-  subjects              Subjects[] // A teacher can teach multiple subjects
-  unitTestMarks         UnitTestMarks[] // Related to the unit test marks
-  labAssignments        LabAssignments[] // Lab assignments linked to the teacher
-  mentorships           Mentorship[] // Mentorship responsibilities
-  classCoordinator      ClassCoordinator[] // Class coordinator role
-  attendanceCoordinator AttendanceCoordinator[] // Attendance coordinator
-  studentAchievements   StudentAchievementCommittee[] // Student achievements committee
-  auditcourse           AuditcourseCommittee[] // Example for audit courses
+  
+  roles                  TeacherRoles[] 
+  unitTestMarks          UnitTestMarks[] 
+  labAssignments         LabAssignments[] 
+  mentorships            Mentorship[] 
+  classCoordinator       ClassCoordinator[] 
+  attendanceCoordinator  AttendanceCoordinator[] 
+  studentAchievements    StudentAchievementCommittee[] 
+  auditcourse            AuditcourseCommittee[] 
+  teachertheoryClass     TeacherTheoryClass[] 
+  teacherBatch           TeacherBatch[]
+  teachertheorysubject   TeacherTheorySubject[]
+  teacherlabsubject      TeacherLabSubjects[]
 }
 
 model TeacherRoles {
   teacher_id Int
   role_id    Int
+
   teacher    Teacher @relation(fields: [teacher_id], references: [teacher_id])
   role       Role    @relation(fields: [role_id], references: [id])
-
+   
   @@id([teacher_id, role_id])
 }
 
 model Role {
   id           Int            @id @default(autoincrement())
   name         String         @unique
-  teacherRoles TeacherRoles[] // This correctly links back to TeacherRoles
+  
+  teacherRoles TeacherRoles[] 
 }
 
-model Subjects {
-  sub_id     Int         @id @default(autoincrement())
-  name       String
-  type       SubjectType
-  teacher_id Int?
+model TheoryClass {
+  id                  Int                    @id @default(autoincrement())
+  name                String                 @unique 
+  teachertheoryClass  TeacherTheoryClass[]
+  teachertheorysubject TeacherTheorySubject[] // Added missing relation
+}
 
-  teacher Teacher? @relation(fields: [teacher_id], references: [teacher_id], onDelete: SetNull)
+model TeacherTheoryClass {
+  teacher_id  Int
+  class_id    Int
+  
+  teacher     Teacher      @relation(fields: [teacher_id], references: [teacher_id])
+  class       TheoryClass  @relation(fields: [class_id], references: [id])
 
-  unitTestMarks  UnitTestMarks[]
-  labAssignments LabAssignments[]
+  @@id([teacher_id, class_id])
+}
+
+model TheorySubjects {
+  id                   Int                   @id @default(autoincrement())
+  name                 String                @unique 
+  teachertheorysubject TeacherTheorySubject[]
+  unitTestMarks        UnitTestMarks[]       // Added missing relation
+}
+
+model TeacherTheorySubject {
+  teacher_id    Int  
+  subject_id    Int  
+  class_id      Int
+  teacher       Teacher         @relation(fields: [teacher_id], references: [teacher_id])
+  theorysubject TheorySubjects  @relation(fields: [subject_id], references: [id])
+  class         TheoryClass     @relation(fields: [class_id], references: [id])
+  
+  @@id([teacher_id, subject_id, class_id])
+}
+
+model LabSubjects {
+  id                Int                 @id @default(autoincrement())
+  name              String              @unique
+  teacherlabsubjects TeacherLabSubjects[]
+  labAssignments    LabAssignments[]    // Added missing relation
+}
+
+model TeacherLabSubjects {
+  teacher_id   Int
+  subject_id   Int
+  batch_id     Int
+  teacher      Teacher      @relation(fields: [teacher_id], references: [teacher_id])  
+  labsubjects  LabSubjects  @relation(fields: [subject_id], references: [id])
+  batch        Batch        @relation(fields: [batch_id], references: [id])
+  
+  @@id([teacher_id, subject_id, batch_id])
+}
+
+model Batch {
+  id              Int               @id @default(autoincrement())
+  name            String            @unique 
+  teacherBatch    TeacherBatch[]
+  teacherLabSubjects TeacherLabSubjects[] // Added missing relation
+}
+
+model TeacherBatch {
+  teacher_id  Int 
+  batch_id    Int
+  teacher     Teacher  @relation(fields: [teacher_id], references: [teacher_id])
+  batch       Batch    @relation(fields: [batch_id], references: [id])
+
+  @@id([teacher_id, batch_id]) 
 }
 
 model UnitTestMarks {
-  ut_id       Int        @id @default(autoincrement())
-  student_id  Int
-  sub_id      Int
-  teacher_id  Int?
-  test_number TestNumber
-  marks       Int        @default(0)
-  student     Student    @relation(fields: [student_id], references: [student_id], onDelete: Cascade)
-  subject     Subjects   @relation(fields: [sub_id], references: [sub_id], onDelete: Cascade)
-  teacher     Teacher?   @relation(fields: [teacher_id], references: [teacher_id], onDelete: SetNull)
+  ut_id        Int        @id @default(autoincrement())
+  student_id   Int
+  sub_id       Int
+  teacher_id   Int?
+  Div          String
+  test_number  TestNumber
+  marks        Int        @default(0)
+  student      Student    @relation(fields: [student_id], references: [student_id], onDelete: Cascade)
+  theorysubject TheorySubjects @relation(fields: [sub_id], references: [id], onDelete: Cascade)
+  teacher      Teacher?   @relation(fields: [teacher_id], references: [teacher_id], onDelete: SetNull)
 }
 
 model LabAssignments {
@@ -89,9 +151,26 @@ model LabAssignments {
   status     LabStatus @default(Pending)
   batch      String
   student    Student   @relation(fields: [student_id], references: [student_id], onDelete: Cascade)
-  subject    Subjects  @relation(fields: [sub_id], references: [sub_id], onDelete: Cascade)
+  labsubjects LabSubjects @relation(fields: [sub_id], references: [id], onDelete: Cascade)
   teacher    Teacher?  @relation(fields: [teacher_id], references: [teacher_id], onDelete: SetNull)
 }
+model ClassCoordinatortoDiv{
+  cc_id Int  @id @default(autoincrement())
+  Div   String
+  
+}
+
+model AuditCourseToBatch{
+
+  Teacher_id  Int    @id @default(autoincrement())
+  Batch String
+}
+model MentorToBatch{
+  Teacher_id  Int   @id @default(autoincrement())
+  Batch     String
+}
+
+
 
 model Mentorship {
   mentor_id  Int              @id @default(autoincrement())
@@ -99,28 +178,29 @@ model Mentorship {
   teacher_id Int?
   batch      String
   status     MentorshipStatus @default(Pending)
-
+ 
   student Student  @relation(fields: [student_id], references: [student_id], onDelete: Cascade)
   teacher Teacher? @relation(fields: [teacher_id], references: [teacher_id], onDelete: SetNull)
 }
 
 model ClassCoordinator {
-  cc_id                   Int              @id @default(autoincrement())
-  student_id              Int
+  cc_id                   Int      @id @default(autoincrement())        
+  student_id              Int     
   teacher_id              Int?
   final_submission_status SubmissionStatus @default(Pending)
   feedback_status         FeedbackStatus   @default(Pending)
-  div                     String
+  Div                     String
   student                 Student          @relation(fields: [student_id], references: [student_id], onDelete: Cascade)
   teacher                 Teacher?         @relation(fields: [teacher_id], references: [teacher_id], onDelete: SetNull)
 }
+
 
 model AttendanceCoordinator {
   id                Int              @id @default(autoincrement())
   student_id        Int
   teacher_id        Int?
   attendance_status AttendanceStatus @default(Pending)
-
+   
   student Student  @relation(fields: [student_id], references: [student_id], onDelete: Cascade)
   teacher Teacher? @relation(fields: [teacher_id], references: [teacher_id], onDelete: SetNull)
 }
@@ -130,7 +210,7 @@ model StudentAchievementCommittee {
   student_id Int
   teacher_id Int?
   status     AchievementStatus @default(Pending)
-
+  
   student Student  @relation(fields: [student_id], references: [student_id], onDelete: Cascade)
   teacher Teacher? @relation(fields: [teacher_id], references: [teacher_id], onDelete: SetNull)
 }

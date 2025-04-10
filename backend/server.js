@@ -5,6 +5,7 @@ import bodyParser from "body-parser";
 import cookieParser from "cookie-parser";
 import { prism, connectDB } from "./config/db.config.js";
 import authroutes from "./routes/authroutes.js";
+import Dashboardroutes from "./routes/DashboardRoutes.js"
 const app = express();
 app.use(cookieParser());
 const corsOptions = {
@@ -24,6 +25,7 @@ app.get("/", (req, res) => {
 });
 
 app.use('/auth' , authroutes) ; 
+app.use('/dashboard' , Dashboardroutes) ;
 process.on("SIGINT", async () => {
   await prism.$disconnect();
   console.log("🛑 Prisma disconnected.");
