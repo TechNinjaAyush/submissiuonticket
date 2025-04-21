@@ -1,18 +1,27 @@
- # Use Node.js base image
-FROM node:18
+  # Use the official Node.js LTS image
+  #backend dockerfile
+
+FROM node:18-alpine
 
 # Set working directory
+
 WORKDIR /app
 
-# Copy package files and install dependencies
+# Copy package.json and lock files
 COPY package*.json ./
+
+# Install dependencies
 RUN npm install
-RUN npx prisma generate
-# Copy the rest of the files
+
+# Copy the rest of the project files
 COPY . .
 
-# Expose the port
+# Generate Prisma client
+RUN npx prisma generate
+
+# Expose the port your app runs on
 EXPOSE 3000
 
-# Start the app
+# Start the server
 CMD ["node", "server.js"]
+

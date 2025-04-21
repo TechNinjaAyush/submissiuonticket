@@ -1,4 +1,59 @@
 import { prism} from "../config/db.config.js";  // Ensure correct import
+import redisClient from "../utils/redisClient.js";
+// FetchinngLabStudents with batch-specific cache key
+export const FetchinngLabStudents = async(req, res) => {
+    const { batch } = req.query;
+    if (!batch) {
+        return res.status(400).json({ message: "Batch parameter is required" });
+    }
+    
+    // Make cache key specific to batch
+    const cacheKey = `Labstudents:${batch}`;
+    
+    const students = await redisClient.get(cacheKey);
+    if(students) {
+        console.log("Fetching from Redis cache");
+        return res.status(200).json({ students: JSON.parse(students) });
+    }
+
+    try {
+        const students = await prism.student.findMany({
+            where: {
+                batch: batch,
+            },
+            select: {
+                student_id: true,
+                name: true,
+                labAssignments: {
+                    select: {
+                        status: true,
+                        sub_id: true,
+                    },
+                },
+            },
+        });
+
+        // Transform the data to flatten the structure
+        const transformedStudents = students.map(student => ({
+            student_id: student.student_id,
+            name: student.name,
+            status: student.labAssignments[0]?.status || "Pending",
+        }));
+        
+        console.log("Fetched students:", transformedStudents);
+        
+        // Store with batch-specific key
+        await redisClient.set(cacheKey, JSON.stringify(transformedStudents));
+        await redisClient.expire(cacheKey, 3600); // 1 hour expiration
+        
+        return res.status(200).json({ Labstudents: transformedStudents });
+    } catch (err) {
+        console.error("Error fetching students:", err);
+        return res.status(500).json({ message: "Internal server error" });
+    }
+};
+
+// UpdateLabStatus with cache invalidation
 export const UpdateLabStatus = async (req, res) => {
     const { student_id, subject_id } = req.query;
     
@@ -17,6 +72,18 @@ export const UpdateLabStatus = async (req, res) => {
             return res.status(400).json({ message: "Invalid student_id or subject_id format" });
         }
 
+        // Get the student's batch before updating (needed for cache invalidation)
+        const studentDetails = await prism.student.findUnique({
+            where: { student_id: studentIdInt },
+            select: { batch: true }
+        });
+        
+        if (!studentDetails) {
+            return res.status(404).json({ message: "Student not found" });
+        }
+        
+        const studentBatch = studentDetails.batch;
+
         // Update the lab assignment status
         const updatedStudents = await prism.labAssignments.updateMany({
             where: {
@@ -32,11 +99,16 @@ export const UpdateLabStatus = async (req, res) => {
             return res.status(404).json({ message: "No records found for the given student_id and subject_id" });
         }
 
+        // Invalidate the Redis cache for this batch
+        const cacheKey = `Labstudents:${studentBatch}`;
+        await redisClient.del(cacheKey);
+        console.log(`Invalidated cache for batch: ${studentBatch}`);
+
         // Fetch updated records with student details
         const studentsWithDetails = await prism.labAssignments.findMany({
             where: {
                 student_id: studentIdInt,
-                sub_id: subjectIdInt, // Ensuring subject_id filter is applied
+                sub_id: subjectIdInt,
             },
             include: {
                 student: {
@@ -58,46 +130,6 @@ export const UpdateLabStatus = async (req, res) => {
         return res.status(500).json({ message: "Internal server error" });
     }
 };
-
-  
-export const FetchinngLabStudents  = async(req , res)=>{
-    
-    const { batch } = req.query;
-    
-
-    try {
-        const students = await prism.student.findMany({
-            where: {
-                batch  :batch, 
-            },
-            select: {
-                student_id: true,
-                name: true,
-                labAssignments: {
-                    select: {
-                        status: true,
-                        sub_id: true,
-                    },
-                },
-            },
-        });
-
-        // Transform the data to flatten the structure
-        const transformedStudents = students.map(student => ({
-            student_id: student.student_id,
-            name: student.name,
-            status  : student.labAssignments[0]?.status || "Pending",
-            
-        }));
-
-        return res.status(200).json({ students: transformedStudents });
-    } catch (err) {
-        console.error("Error fetching students:", err);
-        return res.status(500).json({ message: "Internal server error" });
-    }
-  
- 
-}
 export const LabTeacherDashboard = async (req, res) => {
     const { teacher_id } = req.query; // Change to req.params if necessary
 

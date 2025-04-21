@@ -1,6 +1,6 @@
-import bcrypt from "bcryptjs";
+import bcrypt from "bcrypt";
+
 import { prism } from "../config/db.config.js";
-import { AttendanceStatus, TestNumber } from "@prisma/client";
 
 // 📌 Student Registration
 async function InsertingUnitTestData(student_id, Div) {

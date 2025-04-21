@@ -35,8 +35,8 @@ const StudentRegistrations = () => {
 
       const data = await response.json();
       console.log("Response Data:", data);
-      console.log("Student ID:", data.user.student_id);
-      localStorage.setItem("student_id", data.user.student_id);
+      console.log("Student ID:", data.student.student_id);
+      localStorage.setItem("student_id", data.student.student_id);
 
       if (response.ok) {
         toast.success("Registration successful", { position: "top-left" });

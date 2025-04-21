@@ -16,10 +16,12 @@ import { updateFeedbackStatus } from "../controllers/CCdashboard.js";
 import { UpdateSubmissionStatus } from "../controllers/CCdashboard.js";
 import { updateAttendanceStatus } from "../controllers/Attendancecoordiantor.js";
 import { FetchingStudents } from "../controllers/Attendancecoordiantor.js";
+import { downloadStudentReport } from "../controllers/StudentReport.js";
+ 
 const router = express.Router(); 
 router.get("/attendance-coordinator/students", FetchingStudents);
 router.put("/attendance-coordinator/status", updateAttendanceStatus);
-
+router.get("/StudentReportPdF" , downloadStudentReport)
 router.get("/teachers/theory", TheoryTeacherDashboard);
 router.get("/teachers/lab", LabTeacherDashboard);
 router.get("/teachers/audit-courses/batches", getAuditCourseBatches);

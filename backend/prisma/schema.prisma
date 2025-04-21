@@ -23,6 +23,8 @@ model Student {
   attendanceCoordinator AttendanceCoordinator[]
   studentAchievements   StudentAchievementCommittee[]
   auditcourse           AuditcourseCommittee[]
+           
+
 }
 
 model Teacher {

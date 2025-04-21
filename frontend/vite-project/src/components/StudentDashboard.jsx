@@ -38,6 +38,40 @@ const StudentDashboard = () => {
     navigate("/StudentLogin");
   };
 
+  const DownloadReport = async () => {
+    try {
+      setLoading(true);
+      const student_id = localStorage.getItem("student_id");
+  
+      if (!student_id) {
+        setError("Student ID not found");
+        setLoading(false);
+        return;
+      }
+  
+      const response = await axios.get("http://localhost:3000/dashboard/students", {
+        params: { student_id },
+        responseType: 'blob', // 🚨 This is the important part
+      });
+  
+      const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }));
+  
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `student_report_${student_id}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+  
+      setLoading(false);
+    } catch (err) {
+      setError("Failed to download report");
+      setLoading(false);
+      console.error("Download error:", err);
+    }
+  };
+  
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 flex items-center justify-center">
@@ -339,7 +373,7 @@ const StudentDashboard = () => {
       {/* Footer with download button */}
       <div className="flex justify-center mt-8">
         <button 
-          onClick={() => {}}
+          onClick={DownloadReport}
           className="px-8 py-3 bg-gradient-to-r from-indigo-600 to-blue-500 text-white rounded-full shadow-lg hover:shadow-xl transition-all transform hover:-translate-y-1 flex items-center"
         >
           <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">

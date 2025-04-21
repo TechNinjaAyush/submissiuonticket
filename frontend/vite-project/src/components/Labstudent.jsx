@@ -25,6 +25,7 @@ const Labstudent = () => {
 
                 const studentData = response.data.students || [];
                 setStudents(studentData);
+                console.log("students data is" , studentData);
                 setError(null);
             } catch (error) {
                 console.error("Error fetching data:", error.response?.data || error.message);

@@ -3,44 +3,72 @@ import axios from "axios";
 import { useNavigate } from "react-router-dom";
 
 const TheoryStudent = () => {
+    // State management
     const [students, setStudents] = useState([]);
     const [selectedStudent, setSelectedStudent] = useState(null);
     const [selectedTest, setSelectedTest] = useState(null);
     const [newMarks, setNewMarks] = useState("");
     const [showModal, setShowModal] = useState(false);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
     const [className, setClassName] = useState("");
     const [subjectName, setSubjectName] = useState("Theory Subject");
     const navigate = useNavigate();
 
+    // Fetch students data when component mounts
     useEffect(() => {
         const fetchStudents = async () => {
             setLoading(true);
-            const division = localStorage.getItem("className");
-            const subjectId = localStorage.getItem("subjectId");
-            
-            if (division && subjectId) {
+            try {
+                // Get stored values from localStorage
+                const division = localStorage.getItem("className");
+                const subjectId = localStorage.getItem("subjectId");
+                
+                if (!division || !subjectId) {
+                    throw new Error("Class or subject information not found.");
+                }
+                
                 setClassName(division);
-                try {
-                    const response = await axios.get('http://localhost:3000/dashboard/students/theory', {
-                        params: {
-                            div: division,
-                            sub_id: subjectId
-                        }
-                    });
+                
+                // Fetch student data from API
+                const response = await axios.get('http://localhost:3000/dashboard/students/theory', {
+                    params: {
+                        div: division,
+                        sub_id: subjectId
+                    }
+                });
+                
+                // Log the response for debugging
+                console.log("API Response:", response.data);
+
+                // Handle different response structures
+                if (response.data && Array.isArray(response.data.students)) {
+                    // If the API returns { students: [...] }
+                    setStudents(response.data.students);
+                    
+                    // Set subject name if available
+                    if (response.data.subject_name) {
+                        setSubjectName(response.data.subject_name);
+                    }
+                } else if (Array.isArray(response.data)) {
+                    // If the API directly returns an array of students
                     setStudents(response.data);
                     
-                    // Set subject name if available in response
+                    // Try to extract subject name if available
                     if (response.data.length > 0 && response.data[0].subject_name) {
                         setSubjectName(response.data[0].subject_name);
                     }
-                    
-                    setLoading(false);
-                } catch (error) {
-                    console.error('Error fetching students data:', error);
-                    setLoading(false);
+                } else {
+                    // If the response doesn't match expected formats
+                    console.error("Unexpected API response format:", response.data);
+                    setStudents([]);
+                    setError("Unable to parse student data from server response.");
                 }
-            } else {
+            } catch (error) {
+                console.error('Error fetching students data:', error);
+                setError(error.message || "Failed to load student data");
+                setStudents([]);  // Initialize as empty array to prevent errors
+            } finally {
                 setLoading(false);
             }
         };
@@ -48,22 +76,44 @@ const TheoryStudent = () => {
         fetchStudents();
     }, []);
 
+    // Handle clicking the update button for a student's test
     const handleUpdateClick = (student, testNumber) => {
+        if (!student) {
+            console.error("No student selected");
+            return;
+        }
+        
         setSelectedStudent(student);
         setSelectedTest(testNumber);
-        const currentMarks = student.unitTestMarks.find(mark => mark.test_number === testNumber)?.marks || 0;
+        
+        // Find current marks to populate the input, with safe access
+        const currentMarks = student.unitTestMarks?.find(mark => mark.test_number === testNumber)?.marks ?? 0;
         setNewMarks(currentMarks.toString());
         setShowModal(true);
     };
 
+    // Handle saving updated marks
     const handleUpdateMarks = async () => {
         try {
-            const utMark = selectedStudent.unitTestMarks.find(mark => mark.test_number === selectedTest);
-            if (!utMark) {
-                console.error('UT mark not found');
+            if (!selectedStudent || !selectedTest) {
+                console.error("Missing student or test information");
+                return;
+            }
+            
+            // Safely access unitTestMarks
+            const unitTestMarks = selectedStudent.unitTestMarks || [];
+            const utMark = unitTestMarks.find(mark => mark.test_number === selectedTest);
+            
+            // If this mark doesn't exist yet, handle that case
+            if (!utMark || !utMark.ut_id) {
+                console.error('UT mark not found. Creating new mark record...');
+                // Here you could implement logic to create a new mark record
+                // For now, we'll just show an error
+                setError("Cannot update marks: Test record not found.");
                 return;
             }
 
+            // Call API to update marks
             await axios.put('http://localhost:3000/dashboard/students/unit-test-marks', null, {
                 params: {
                     ut_id: utMark.ut_id,
@@ -71,8 +121,8 @@ const TheoryStudent = () => {
                 }
             });
 
-            // Update local state
-            setStudents(students.map(student => {
+            // Update local state using functional update to ensure latest state
+            setStudents(prevStudents => prevStudents.map(student => {
                 if (student.student_id === selectedStudent.student_id) {
                     return {
                         ...student,
@@ -89,21 +139,25 @@ const TheoryStudent = () => {
             setShowModal(false);
         } catch (error) {
             console.error('Error updating marks:', error);
+            setError("Failed to update marks. Please try again.");
         }
     };
 
+    // Navigate back to previous page
     const handleBack = () => {
         navigate(-1);
     };
 
-    // Function to get test status color
+    // Function to determine color based on marks
     const getStatusColor = (marks) => {
-        if (marks >= 75) return "bg-green-100 text-green-800 border-green-200";
-        if (marks >= 60) return "bg-blue-100 text-blue-800 border-blue-200";
-        if (marks >= 35) return "bg-yellow-100 text-yellow-800 border-yellow-200";
+        marks = Number(marks);
+        if (marks >= 20) return "bg-green-100 text-green-800 border-green-200";
+        if (marks >= 15) return "bg-yellow-100 text-yellow-800 border-yellow-200";
+        if (marks >= 10) return "bg-orange-100 text-orange-800 border-orange-200";
         return "bg-red-100 text-red-800 border-red-200";
     };
 
+    // Show loading state
     if (loading) {
         return (
             <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-blue-100 flex flex-col items-center justify-center">
@@ -111,6 +165,25 @@ const TheoryStudent = () => {
                     <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-indigo-600 mx-auto mb-4"></div>
                     <h2 className="text-xl text-indigo-800 font-medium">Loading student data...</h2>
                     <p className="text-gray-500 mt-2">Please wait while we fetch marks information</p>
+                </div>
+            </div>
+        );
+    }
+
+    // Show error state
+    if (error) {
+        return (
+            <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-blue-100 flex flex-col items-center justify-center">
+                <div className="text-center p-8 bg-white rounded-xl shadow-lg max-w-md">
+                    <div className="text-red-500 text-5xl mb-4">⚠️</div>
+                    <h2 className="text-xl text-red-800 font-medium">Error Loading Data</h2>
+                    <p className="text-gray-600 mt-2 mb-4">{error}</p>
+                    <button 
+                        onClick={() => window.location.reload()}
+                        className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+                    >
+                        Try Again
+                    </button>
                 </div>
             </div>
         );
@@ -180,21 +253,22 @@ const TheoryStudent = () => {
                                 </thead>
                                 <tbody className="divide-y divide-gray-200">
                                     {students.map((student, index) => {
-                                        const ut1 = student.unitTestMarks.find(mark => mark.test_number === "UT1")?.marks || 0;
-                                        const ut2 = student.unitTestMarks.find(mark => mark.test_number === "UT2")?.marks || 0;
-                                        const ut3 = student.unitTestMarks.find(mark => mark.test_number === "UT3")?.marks || 0;
+                                        // Safely access marks with nullish coalescing
+                                        const ut1 = student.unitTestMarks?.find(mark => mark.test_number === "UT1")?.marks ?? 0;
+                                        const ut2 = student.unitTestMarks?.find(mark => mark.test_number === "UT2")?.marks ?? 0;
+                                        const ut3 = student.unitTestMarks?.find(mark => mark.test_number === "UT3")?.marks ?? 0;
 
                                         return (
-                                            <tr key={student.student_id} className="hover:bg-gray-50 transition-colors">
+                                            <tr key={student.student_id || index} className="hover:bg-gray-50 transition-colors">
                                                 <td className="px-6 py-4 whitespace-nowrap text-gray-500">{index + 1}</td>
                                                 <td className="px-6 py-4 whitespace-nowrap">
                                                     <div className="flex items-center">
                                                         <div className="h-10 w-10 rounded-full bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center text-white font-medium">
-                                                            {student.name.charAt(0).toUpperCase()}
+                                                            {student.name ? student.name.charAt(0).toUpperCase() : '?'}
                                                         </div>
                                                         <div className="ml-3">
-                                                            <div className="text-sm font-medium text-gray-900">{student.name}</div>
-                                                            <div className="text-sm text-gray-500">ID: {student.student_id}</div>
+                                                            <div className="text-sm font-medium text-gray-900">{student.name || 'Unknown'}</div>
+                                                            <div className="text-sm text-gray-500">ID: {student.student_id || 'N/A'}</div>
                                                         </div>
                                                     </div>
                                                 </td>
@@ -261,7 +335,7 @@ const TheoryStudent = () => {
             </footer>
 
             {/* Update Marks Modal */}
-            {showModal && (
+            {showModal && selectedStudent && (
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
                     <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6 animate-fade-in">
                         <div className="flex justify-between items-center mb-4">
@@ -280,11 +354,11 @@ const TheoryStudent = () => {
                         <div className="mb-4">
                             <div className="flex items-center mb-4">
                                 <div className="h-10 w-10 rounded-full bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center text-white font-medium">
-                                    {selectedStudent?.name.charAt(0).toUpperCase()}
+                                    {selectedStudent.name ? selectedStudent.name.charAt(0).toUpperCase() : '?'}
                                 </div>
                                 <div className="ml-3">
-                                    <div className="text-lg font-medium text-gray-900">{selectedStudent?.name}</div>
-                                    <div className="text-sm text-gray-500">Student ID: {selectedStudent?.student_id}</div>
+                                    <div className="text-lg font-medium text-gray-900">{selectedStudent.name || 'Unknown'}</div>
+                                    <div className="text-sm text-gray-500">Student ID: {selectedStudent.student_id || 'N/A'}</div>
                                 </div>
                             </div>
                             <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -296,7 +370,7 @@ const TheoryStudent = () => {
                                 onChange={(e) => setNewMarks(e.target.value)}
                                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-lg"
                                 min="0"
-                                max="100"
+                                max="30"
                             />
                             <div className="text-sm text-gray-500 mt-2">
                                 Enter a value between 0 and 30

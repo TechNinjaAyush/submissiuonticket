@@ -41,6 +41,7 @@ export const TheoryTeacher = () => {
     const handleLogout = () => {
         // Clear all localStorage items
         localStorage.clear();
+        
         // Redirect to teacher login page
         navigate("/TeacherLogin");
     };
